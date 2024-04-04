@@ -1,0 +1,56 @@
+name: Analyze with SonarCloud
+description: An opinionated action that hooks into the build pipeline, downloads SonarCloud quality profiles and settings, and prepares your project for analysis with SonarScanner for .NET.
+inputs:
+  token:
+    description: The SonarCloud generated token.
+    required: true
+  projectKey:
+    description: The key of your project in SonarCloud.
+    required: true
+  organization:
+    description: The name of your organization in SonarCloud.
+    required: true
+  version:
+    description: The version of your project, e.g. 1.0.0.
+    required: true
+  host:
+    description: The host URL of your SonarCloud instance, e.g. https://sonarcloud.io.
+    required: true
+    default: 'https://sonarcloud.io'
+  parameters:
+    description: Additional properties to be passed to the scanner. Default is to use properties tailored for C# and the coding conventions followed by Codebelt.
+    required: false
+    default: >-
+      -d:sonar.exclusions='**/obj/**,**/bin/**'
+      -d:sonar.sources='src/'
+      -d:sonar.tests='test/'
+runs:
+  using: composite
+  steps:
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: 17
+        distribution: zulu
+
+    - name: SonarScanner for .NET
+      run: >-
+        dotnet sonarscanner begin
+        -k:'${{ inputs.projectKey }}'
+        -o:'${{ inputs.organization }}'
+        -v:'${{ inputs.version }}'
+        -d:sonar.token='${{ inputs.token }}'
+        -d:sonar.host.url='${{ inputs.host }}'
+        -d:sonar.cs.opencover.reportsPaths='${{ github.workspace }}/artifacts/TestResults*/**/*opencover.xml'
+        -d:sonar.cs.vstest.reportsPaths='${{ github.workspace }}/artifacts/TestResults*/**/*.trx'
+        ${{ inputs.parameters }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        SONAR_TOKEN: ${{ inputs.token }}
+      shell: bash
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ${{ github.workspace }}/artifacts
+        pattern: TestResults*
