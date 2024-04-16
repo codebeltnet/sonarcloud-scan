@@ -54,3 +54,6 @@ runs:
       with:
         path: ${{ github.workspace }}/artifacts
         pattern: TestResults*
+branding:
+  icon: 'umbrella'
+  color: 'blue'
