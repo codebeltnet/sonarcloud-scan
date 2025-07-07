@@ -22,17 +22,9 @@ inputs:
     required: false
     default: >-
       -d:sonar.exclusions='**/obj/**,**/bin/**'
-      -d:sonar.sources='src/'
-      -d:sonar.tests='test/'
 runs:
   using: composite
   steps:
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: 17
-        distribution: zulu
-
     - name: SonarScanner for .NET
       run: >-
         dotnet sonarscanner begin
