@@ -33,7 +33,7 @@ runs:
         -v:'${{ inputs.version }}'
         -d:sonar.token='${{ inputs.token }}'
         -d:sonar.host.url='${{ inputs.host }}'
-        -d:sonar.cs.opencover.reportsPaths='${{ github.workspace }}/artifacts/TestResults*/**/*opencover.xml'
+        -d:sonar.cs.opencover.reportsPaths='${{ github.workspace }}/artifacts/TestResults*/**/*opencover*.xml'
         -d:sonar.cs.vstest.reportsPaths='${{ github.workspace }}/artifacts/TestResults*/**/*.trx'
         ${{ inputs.parameters }}
       env:
