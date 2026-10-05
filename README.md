@@ -18,7 +18,7 @@ Uses the [SonarScanner for .NET tool](https://www.nuget.org/packages/dotnet-sona
 To use this action in your GitHub repository, you can follow these steps:
 
 ```yaml
-uses: codebeltnet/sonarcloud-scan@v1
+uses: codebeltnet/sonarcloud-scan@v2
 ```
 
 ### Inputs
@@ -38,6 +38,14 @@ with:
   # Additional properties to be passed to the scanner.
   parameters: >-
     -d:sonar.exclusions='**/obj/**,**/bin/**'
+  # Coverage representation: opencover (default) or normalized (opt in).
+  coverage-mode: opencover
+  # Repository-relative source directory, used only in normalized mode.
+  coverage-source-root: src
+  # Artifact-relative path capture groups identify build variant and target framework.
+  coverage-partition-regex: '^([^/]+?)(?:-[0-9a-f]{16,})?/([^/]+)/'
+  # Optional caller acceptance guard; empty means no maximum source-line spread.
+  coverage-max-identity-spread: ''
 ```
 
 ### Outputs
@@ -51,13 +59,42 @@ This action has no outputs.
 ```yaml
 steps:
   - name: Run SonarCloud Analysis
-    uses: codebeltnet/sonarcloud-scan@v1
+    uses: codebeltnet/sonarcloud-scan@v2
     with:
       token: ${{ secrets.SONAR_TOKEN }}
       organization: geekle
       projectKey: savvyio
       version: ${{ needs.build.outputs.version }}
 ```
+
+### Normalize overlapping coverage evidence
+
+Install Bash, the SonarScanner for .NET tool and the SDKs required by your build before using this action. The default mode retains its existing Bash prerequisite. Normalized mode additionally requires PowerShell 7 and a stable .NET 10 SDK; prerequisites remain caller-managed. GitHub-hosted runners provide PowerShell 7. `jobs-sonarcloud@v3` installs the supported SDKs and scanner for its callers.
+
+```yaml
+- uses: codebeltnet/sonarcloud-scan@v2
+  with:
+    token: ${{ secrets.SONAR_TOKEN }}
+    organization: your-organization
+    projectKey: your-project
+    version: ${{ needs.build.outputs.version }}
+    coverage-mode: normalized
+    coverage-source-root: src
+```
+
+Both modes download `TestResults*` once, retaining each artifact directory. The default `opencover` mode retains `sonar.cs.opencover.reportsPaths=<workspace>/artifacts/TestResults*/**/*opencover*.xml` and the existing VSTest glob. Existing callers need no new inputs.
+
+Normalized mode streams `**/*opencover*.xml` from those artifact directories into exactly one `artifacts/CoverageNormalized/SonarQube.report.xml`, reconciles its persisted counters with `summary.json`, then begins analysis with only `sonar.coverageReportPaths`. VSTest reports remain configured in both modes. Raw reports remain intact. Caller build and scanner finalization follow this action as before.
+
+Source paths use `/` separators and the first complete `coverage-source-root` directory marker, preserving case. For example, Windows `D:\agent\repo\src\Product\A.cs`, Linux `/home/runner/repo/src/Product/A.cs` and macOS `/Users/runner/repo/src/Product/A.cs` become `src/Product/A.cs`. Nested roots such as `packages/source` work too. Paths outside the source root retain the proven fallback of removing leading separators. No source lines absent from reports are fabricated; Sonar calculates production coverage over its normal source universe.
+
+The partition regex operates on paths relative to `artifacts`. Its capture groups are joined with `+` to identify one compilation variant. The default groups `TestResults-Debug-Linux-X64/net10.0/...` by artifact variant and target framework, stripping optional hexadecimal artifact suffixes. Every report must match. If your artifact layout differs, supply a pattern that separates configuration, OS, architecture and target framework as applicable. Partition identity affects conflict validation, not execution union.
+
+`coverage-max-identity-spread` is an optional nonnegative integer. An empty value imposes no caller-specific bound. Parser errors, unresolved source IDs and conflicting lines within a partition always fail; cross-partition line drift remains diagnostic unless the caller's spread bound is exceeded. Missing artifacts, missing reports, missing/empty output, failed reconciliation and unsupported modes fail with actionable annotations.
+
+`parameters` accepts whitespace-separated scanner arguments with single or double quotes. Arguments are passed literally; shell expansion and commands are never evaluated. Both `sonar.cs.opencover.reportsPaths` and `sonar.coverageReportPaths` are action-owned and forbidden in `parameters`, including same-mode overrides. This ensures exactly one coverage model.
+
+See [normalizer semantics](tooling/CoverageNormalizer/README.md) and [validation provenance and compiler-divergence limitation](docs/coverage-normalization.md). Codecov continues consuming raw coverage independently; this action does not normalize its input.
 
 ## Caller workflows to showcase the Codebelt experience
 
