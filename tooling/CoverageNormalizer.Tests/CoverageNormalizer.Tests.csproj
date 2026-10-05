@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- This tool targets net10.0 only, unlike the multi-target product libraries. -->
+    <TargetFrameworks />
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>CoverageNormalizer</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../CoverageNormalizer/CoverageNormalizer.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Codebelt.Extensions.Xunit" Version="12.0.1" />
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+  </ItemGroup>
+</Project>
